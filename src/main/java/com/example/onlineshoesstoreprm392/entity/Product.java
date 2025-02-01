@@ -43,6 +43,9 @@ public class Product {
     List<Inventory> inventories;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<Feedback> feedbacks;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     List<Image> images;
 
     @ManyToOne(fetch = FetchType.LAZY)
