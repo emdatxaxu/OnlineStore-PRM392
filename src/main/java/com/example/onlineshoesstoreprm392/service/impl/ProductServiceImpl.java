@@ -2,8 +2,10 @@ package com.example.onlineshoesstoreprm392.service.impl;
 
 import com.example.onlineshoesstoreprm392.entity.Category;
 import com.example.onlineshoesstoreprm392.entity.Product;
+import com.example.onlineshoesstoreprm392.exception.OnlineStoreAPIException;
 import com.example.onlineshoesstoreprm392.exception.ResourceNotFoundException;
 import com.example.onlineshoesstoreprm392.mapper.ProductMapper;
+import com.example.onlineshoesstoreprm392.payload.ImageDto;
 import com.example.onlineshoesstoreprm392.payload.ProductDto;
 import com.example.onlineshoesstoreprm392.payload.ProductResponse;
 import com.example.onlineshoesstoreprm392.repository.CategoryRepository;
@@ -16,9 +18,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,9 +41,29 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    public ProductDto createProduct(ProductDto productDto) {
+    public ProductDto createProduct(ProductDto productDto, List<MultipartFile> images) {
         Category category = categoryRepository.findById(productDto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategoryId()));
+
+        //check images
+        if(images.isEmpty()){
+            throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST,
+                "No product's image added yet.");
+        }
+        for(MultipartFile img : images){
+            String contentType = img.getContentType();
+            if(!isValidImage(contentType)){
+                throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST,
+                        "Invalid file type. Only JPG, JPEG and PNG allowed.");
+            }
+        }
+        //save image then add image's url to product dto
+        List<ImageDto> listImageDto = new ArrayList<>();
+        for(MultipartFile img : images){
+            String imagePath = saveImage(img);
+            listImageDto.add(new ImageDto(imagePath));
+        }
+        productDto.setImages(listImageDto);
 
         //convert DTO to entity
         Product product = productMapper.toProduct(productDto);
@@ -106,5 +134,26 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductDto> getProductsByCategory(Long categoryId) {
         return null;
+    }
+
+    private boolean isValidImage(String contentType) {
+        return contentType.equals("image/jpeg") || contentType.equals("image/png") || contentType.equals("image/jpg");
+    }
+
+    private String saveImage(MultipartFile file){
+        String filePath = System.getProperty("user.dir")+"\\img\\"+file.getOriginalFilename();
+
+        try {
+            File convertFile = new File(filePath);
+            convertFile.createNewFile();
+            FileOutputStream fileOutputStream = new FileOutputStream(convertFile);
+            fileOutputStream.write(file.getBytes());
+            fileOutputStream.close();
+        }catch (IOException ex){
+            throw new OnlineStoreAPIException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Some error occur when processing file");
+        }
+
+        return filePath;
     }
 }

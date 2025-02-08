@@ -8,13 +8,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.mail.Multipart;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -44,9 +47,10 @@ public class ProductController {
             name = "Bearer Authentication"
     )
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping
-    public ResponseEntity<ProductDto> createPost(@Valid @RequestBody ProductDto productDto){
-        return new ResponseEntity<>(productService.createProduct(productDto), HttpStatus.CREATED);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ProductDto> createProduct(@Valid @ModelAttribute ProductDto productDto,
+                                                    @RequestPart("files") List<MultipartFile> files){
+        return new ResponseEntity<>(productService.createProduct(productDto, files), HttpStatus.CREATED);
     }
 
 
@@ -63,7 +67,7 @@ public class ProductController {
 
     //get post by id
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDto> getPostById(@PathVariable(name = "id") Long id){
+    public ResponseEntity<ProductDto> getProductById(@PathVariable(name = "id") Long id){
         return ResponseEntity.ok(productService.getProductById(id));
     }
 

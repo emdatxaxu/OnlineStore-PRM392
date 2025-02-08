@@ -42,7 +42,6 @@ public class ProductDto {
 
     List<FeedbackDto> feedbacks;
 
-    @NotEmpty
     List<ImageDto> images;
 
     @NotNull

@@ -12,5 +12,9 @@ public class ImageDto {
 
     Long id;
 
-    String image;
+    String image;// url
+
+    public ImageDto(String image) {
+        this.image = image;
+    }
 }
