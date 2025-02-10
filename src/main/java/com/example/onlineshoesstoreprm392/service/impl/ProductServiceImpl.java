@@ -116,24 +116,49 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDto getProductById(Long id) {
 
-        Product product = productRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Product","id",id));
+        Product product = productRepository.findByIdAndDeleted(id, false)
+                .orElseThrow(() -> new ResourceNotFoundException("Product","id",id));
 
         return productMapper.toProductDto(product);
     }
 
     @Override
-    public ProductDto updateProduct(ProductDto dto, Long id) {
-        return null;
+    public ProductDto updateProduct(ProductDto productDto, Long id) {
+
+        Category category = categoryRepository.findById(productDto.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategoryId()));
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product","id",id));
+
+        product.setName(productDto.getName());
+        product.setPrice(productDto.getPrice());
+        product.setDescription(product.getDescription());
+        product.setUpdated_at(new Timestamp(System.currentTimeMillis()));
+        product.setCategory(category);
+
+        Product updatedProduct = productRepository.save(product);
+
+        return productMapper.toProductDto(updatedProduct);
     }
 
     @Override
     public void deleteProductById(Long id) {
-
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product","id",id));
+        product.setDeleted(true);
+        productRepository.save(product);
     }
 
     @Override
     public List<ProductDto> getProductsByCategory(Long categoryId) {
-        return null;
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
+
+        List<Product> products = productRepository.findByCategoryIdAndDeleted(categoryId, false);
+
+        return products.stream().map(product -> productMapper.toProductDto(product))
+                .collect(Collectors.toList());
     }
 
     private boolean isValidImage(String contentType) {

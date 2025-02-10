@@ -72,4 +72,35 @@ public class ProductController {
     }
 
 
+    //update
+    @SecurityRequirement(
+            name = "Bearer Authentication"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDto> updateProduct(@Valid @RequestBody ProductDto productDto,
+                                                 @PathVariable(name = "id") Long id){
+        return ResponseEntity.ok(productService.updateProduct(productDto, id));
+    }
+
+
+
+    //delete
+    @SecurityRequirement(
+            name = "Bearer Authentication"
+    )
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteProduct(@PathVariable(name = "id") Long id){
+        productService.deleteProductById(id);
+        return ResponseEntity.ok("Product Deleted Successfully!");
+    }
+
+    //get post by category api
+    //http://localhost:8080/api/posts/category/2
+    @GetMapping("/category/{id}")
+    public ResponseEntity<List<ProductDto>> getProductsByCategory(@PathVariable(name = "id") Long categoryId){
+        return ResponseEntity.ok(productService.getProductsByCategory(categoryId));
+    }
+
 }

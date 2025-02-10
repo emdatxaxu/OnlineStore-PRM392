@@ -19,6 +19,12 @@ public class CartItem {
     Long id;
 
     @Column(nullable = false)
+    String name;
+
+    @Column(nullable = false)
+    String image;
+
+    @Column(nullable = false)
     BigDecimal unitPrice;
 
     @Column(nullable = false)

@@ -1,10 +1,12 @@
 package com.example.onlineshoesstoreprm392.service.impl;
 
+import com.example.onlineshoesstoreprm392.entity.Cart;
 import com.example.onlineshoesstoreprm392.entity.Role;
 import com.example.onlineshoesstoreprm392.entity.User;
 import com.example.onlineshoesstoreprm392.exception.OnlineStoreAPIException;
 import com.example.onlineshoesstoreprm392.payload.LoginDto;
 import com.example.onlineshoesstoreprm392.payload.RegisterDto;
+import com.example.onlineshoesstoreprm392.repository.CartRepository;
 import com.example.onlineshoesstoreprm392.repository.RoleRepository;
 import com.example.onlineshoesstoreprm392.repository.UserRepository;
 import com.example.onlineshoesstoreprm392.security.JwtTokenProvider;
@@ -17,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,17 +31,20 @@ public class AuthServiceImpl implements AuthService {
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private JwtTokenProvider jwtTokenProvider;
+    private CartRepository cartRepository;
 
     public AuthServiceImpl(AuthenticationManager authenticationManager,
                            UserRepository userRepository,
                            RoleRepository roleRepository,
                            PasswordEncoder passwordEncoder,
-                           JwtTokenProvider jwtTokenProvider) {
+                           JwtTokenProvider jwtTokenProvider,
+                           CartRepository cartRepository) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.cartRepository = cartRepository;
     }
 
     @Override
@@ -78,7 +84,14 @@ public class AuthServiceImpl implements AuthService {
         roles.add(userRole);
         user.setRoles(roles);
 
-        userRepository.save(user);
+        User addedUser = userRepository.save(user);
+
+        //create cart for user
+        Cart cart = new Cart();
+        cart.setTotalPrice(BigDecimal.ZERO);
+        cart.setUser(addedUser);
+
+        cartRepository.save(cart);
 
         return "User register successfully!";
     }
