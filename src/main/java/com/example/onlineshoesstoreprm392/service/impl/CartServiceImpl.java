@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CartServiceImpl implements CartService {
@@ -62,6 +64,8 @@ public class CartServiceImpl implements CartService {
         return cartMapper.toCartDto(cart);
     }
 
+    //normal case: add new item to cart
+    //abnormal case: the item has already added to cart, user want to add more.
     @Override
     public CartDto addToCart(CartItemDto cartItemDto) {
 
@@ -79,16 +83,45 @@ public class CartServiceImpl implements CartService {
         Inventory inventory = inventoryRepository.findById(cartItemDto.getInventory().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory", "id", cartItemDto.getInventory().getId()));
 
-        //compare CartItem's quantity and inventory
-        if(cartItemDto.getQuantity() > inventory.getUnitsInStock()){//khong du san pham
+        //kiem tra xem co san pham tuong tu o trong cart chua, neu da co thi se addToCart se tang so luong cua san pham
+        //o trong cart len, con neu khong thi addToCart se them item moi vao trong cart
+        List<CartItem> sameCartItem = cart.getCartItems().stream()
+                .filter(item -> item.getInventory().getId().equals(cartItemDto.getInventory().getId()))
+                .collect(Collectors.toList());
+        int itemQuantity = cartItemDto.getQuantity();
+
+        if(sameCartItem.size() > 0){//abnormal case
+
+            itemQuantity += sameCartItem.get(0).getQuantity();
+
+            //compare item quantity and inventory
+            if(itemQuantity > inventory.getUnitsInStock()){//khong du san pham
+                throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST, "Insufficient product quantity");
+            }
+
+            CartItem cartItem = sameCartItem.get(0);
+            cartItem.setQuantity(itemQuantity);
+            cartItem.setTotalPrice(product.getPrice().multiply(new BigDecimal(cartItem.getQuantity())));
+
+            updateCartTotalPrice(cart);
+
+            Cart updatedCart = cartRepository.save(cart);
+
+            return cartMapper.toCartDto(updatedCart);
+        }
+
+
+        //compare item quantity and inventory
+        if(itemQuantity > inventory.getUnitsInStock()){//khong du san pham
             throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST, "Insufficient product quantity");
         }
 
+        //normal case
         CartItem cartItem = new CartItem();
         cartItem.setName(product.getName());
         cartItem.setImage(product.getImages().get(0).getImage());
         cartItem.setUnitPrice(product.getPrice());
-        cartItem.setQuantity(cartItemDto.getQuantity());
+        cartItem.setQuantity(itemQuantity);
         cartItem.setTotalPrice(product.getPrice().multiply(new BigDecimal(cartItem.getQuantity())));
         cartItem.setCart(cart);
         cartItem.setProduct(product);
@@ -111,7 +144,10 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public CartDto removeFromCart(Long cartItemId) {
-        //kiem tra xem item do co ton tai ko -> kiem tra xem cart do co phai cua user do ko->xoa item, cap nhat total price cua cart
+        //kiem tra xem item do co ton tai ko
+        // -> kiem tra xem cart do co phai cua user do ko
+        //->kiem tra xem cartitem do co nam trong cart cua user do ko
+        // ->xoa item, cap nhat total price cua cart
         String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
                 .getUsername();
 
@@ -138,8 +174,47 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartDto updateCart(CartItemDto cartItemDto, Long cartItemId) {
-        return null;
+    public CartDto updateCart(CartItemDto cartItemDto, Long cartItemId) { //only update quantity
+        // -> kiem tra xem cart do co phai cua user do ko
+        //->kiem tra xem cartitem do co nam trong cart cua user do ko
+        //->compare CartItem's quantity and inventory
+        // ->cap nhat item, cap nhat total price cua cart
+
+        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
+                .getUsername();
+
+        // -> kiem tra xem cart do co phai cua user do ko
+        User user = userRepository.findByEmail(email).get();
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", user.getId()));
+
+        //kiem tra xem cartitem do co nam trong cart cua user do ko
+        if(!cartItemDto.getCartId().equals(cart.getId())){
+            throw new ResourceNotFoundException("CartItem", "id", cartItemId);
+        }
+
+        Inventory inventory = inventoryRepository.findById(cartItemDto.getInventory().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory", "id", cartItemDto.getInventory().getId()));
+
+        //get the item that need to be updated
+        CartItem cartItem = cart.getCartItems().stream().filter(item -> item.getId().equals(cartItemId))
+                .collect(Collectors.toList()).get(0);
+
+        //compare CartItem's quantity and inventory
+        if(cartItemDto.getQuantity() > inventory.getUnitsInStock()){//khong du san pham
+            throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST, "Insufficient product quantity");
+        }
+        else if(cartItemDto.getQuantity() <= 0){//->xoa item khoi cart
+            cart.getCartItems().remove(cartItem);
+        }
+        else{ //cap nhat so luong va total price cua item
+            cartItem.setQuantity(cartItemDto.getQuantity());
+            cartItem.setTotalPrice(cartItem.getUnitPrice().multiply(new BigDecimal(cartItem.getQuantity())));
+            updateCartTotalPrice(cart);
+        }
+        Cart updatedCart = cartRepository.save(cart);
+
+        return cartMapper.toCartDto(updatedCart);
     }
 
     private void updateCartTotalPrice(Cart cart){

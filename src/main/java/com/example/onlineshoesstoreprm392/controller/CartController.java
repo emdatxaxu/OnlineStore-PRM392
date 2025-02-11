@@ -43,4 +43,12 @@ public class CartController {
         return ResponseEntity.ok(cartService.removeFromCart(cartItemId));
     }
 
+    @PutMapping("/cart-item/{id}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<CartDto> updateCart(@PathVariable("id") Long cartItemId,
+                                              @Valid @RequestBody CartItemDto cartItemDto){
+
+        return ResponseEntity.ok(cartService.updateCart(cartItemDto, cartItemId));
+    }
+
 }

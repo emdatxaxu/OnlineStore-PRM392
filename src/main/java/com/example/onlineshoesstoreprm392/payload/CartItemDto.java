@@ -36,6 +36,7 @@ public class CartItemDto {
     @NotNull
     Long productId;
 
+    @NotNull
     InventoryDto inventory;
 
     Long cartId;
