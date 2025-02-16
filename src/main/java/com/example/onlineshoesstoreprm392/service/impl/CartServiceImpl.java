@@ -175,7 +175,6 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public CartDto updateCart(CartItemDto cartItemDto, Long cartItemId) { //only update quantity
-        // -> kiem tra xem cart do co phai cua user do ko
         //->kiem tra xem cartitem do co nam trong cart cua user do ko
         //->compare CartItem's quantity and inventory
         // ->cap nhat item, cap nhat total price cua cart
@@ -183,7 +182,6 @@ public class CartServiceImpl implements CartService {
         String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
                 .getUsername();
 
-        // -> kiem tra xem cart do co phai cua user do ko
         User user = userRepository.findByEmail(email).get();
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", user.getId()));

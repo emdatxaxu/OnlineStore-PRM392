@@ -28,4 +28,7 @@ public class Inventory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     Product product;
+
+    @Version
+    Long version;
 }
