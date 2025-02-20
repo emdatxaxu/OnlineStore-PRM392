@@ -30,13 +30,6 @@ public class OnlineShoesStorePrm392Application {
     @Bean
     public PayOS payOS(){
         PayOS payOS = new PayOS(clientId, apiKey, checksumKey);
-        //confirm webhook
-        String verifiedWebhookUrl;
-        try {
-            verifiedWebhookUrl = payOS.confirmWebhook(domainUrl+"/api/checkout/payment-info");
-        } catch (Exception e) {
-            throw new OnlineStoreAPIException(HttpStatus.SERVICE_UNAVAILABLE,"Cannot confirm webhook");
-        }
         return payOS;
     }
 

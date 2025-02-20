@@ -11,6 +11,7 @@ import com.example.onlineshoesstoreprm392.payload.ProductResponse;
 import com.example.onlineshoesstoreprm392.repository.CategoryRepository;
 import com.example.onlineshoesstoreprm392.repository.ProductRepository;
 import com.example.onlineshoesstoreprm392.service.ProductService;
+import com.example.onlineshoesstoreprm392.utils.FileUtility;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -46,23 +47,18 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", productDto.getCategoryId()));
 
         //check images
-        if(images.isEmpty()){
-            throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST,
-                "No product's image added yet.");
-        }
-        for(MultipartFile img : images){
-            String contentType = img.getContentType();
-            if(!isValidImage(contentType)){
-                throw new OnlineStoreAPIException(HttpStatus.BAD_REQUEST,
-                        "Invalid file type. Only JPG, JPEG and PNG allowed.");
-            }
-        }
+        FileUtility.checkImages(images);
+
         //save image then add image's url to product dto
         List<ImageDto> listImageDto = new ArrayList<>();
         for(MultipartFile img : images){
-            String imagePath = saveImage(img);
+            String imagePath = System.getProperty("user.dir")+"\\img\\"
+                    +System.currentTimeMillis()+img.getOriginalFilename();
             listImageDto.add(new ImageDto(imagePath));
+            FileUtility fileUtility = new FileUtility();
+            fileUtility.saveFile(img, imagePath);
         }
+
         productDto.setImages(listImageDto);
 
         //convert DTO to entity
@@ -161,24 +157,5 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
-    private boolean isValidImage(String contentType) {
-        return contentType.equals("image/jpeg") || contentType.equals("image/png") || contentType.equals("image/jpg");
-    }
 
-    private String saveImage(MultipartFile file){
-        String filePath = System.getProperty("user.dir")+"\\img\\"+file.getOriginalFilename();
-
-        try {
-            File convertFile = new File(filePath);
-            convertFile.createNewFile();
-            FileOutputStream fileOutputStream = new FileOutputStream(convertFile);
-            fileOutputStream.write(file.getBytes());
-            fileOutputStream.close();
-        }catch (IOException ex){
-            throw new OnlineStoreAPIException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Some error occur when processing file");
-        }
-
-        return filePath;
-    }
 }

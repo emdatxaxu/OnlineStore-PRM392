@@ -8,8 +8,10 @@ import com.example.onlineshoesstoreprm392.payload.RecipientInfoDto;
 import com.example.onlineshoesstoreprm392.repository.*;
 import com.example.onlineshoesstoreprm392.service.CheckoutService;
 import com.example.onlineshoesstoreprm392.utils.OrderStatus;
+import org.hibernate.Hibernate;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -75,8 +78,10 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         do{
             try {
-                Map<Long, Inventory> inventories = inventoryRepository.findAllById(inventoryIds).stream()
-                        .collect(Collectors.toMap(Inventory::getId, inventory -> inventory));
+                List<Inventory> inventoryList = inventoryRepository.findAllById(inventoryIds);
+                inventoryList.forEach(i -> Hibernate.initialize(i));
+                Map<Long, Inventory> inventories = inventoryList.stream()
+                        .collect(Collectors.toMap(Inventory::getId, Function.identity()));
 
                 //kiem tra so luong
                 for(CartItem item : cart.getCartItems()){
@@ -109,11 +114,9 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .build();
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem item : cart.getCartItems()){
-            //create an empty inventory object only have id to set foreign key for order item
+            //create an Reference inventory object to set foreign key for order item
             // => so I can avoid 'lost update'
-            Inventory inventory = new Inventory();
-            inventory.setId(item.getInventory().getId());
-
+            Inventory inventory = inventoryRepository.getReferenceById(item.getInventory().getId());
             OrderItem orderItem = OrderItem.builder()
                     .name(item.getName())
                     .image(item.getImage())
@@ -162,13 +165,6 @@ public class CheckoutServiceImpl implements CheckoutService {
     @Override
     @Transactional(rollbackFor = {Exception.class, RuntimeException.class})
     public void completePayment(Webhook webhook) {
-        String email = ((UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal())
-                .getUsername();
-        //lay ra cart cua customer
-        User user = userRepository.findByEmail(email).get();
-        Cart cart = cartRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", user.getId()));
-
         //webhook domainUrl+"/api/checkout/payment-info"
         //lay data ma PayOS tra ve webhook
         WebhookData webhookData;
@@ -186,11 +182,17 @@ public class CheckoutServiceImpl implements CheckoutService {
         Order order = orderRepository.findById(webhookData.getOrderCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id",webhookData.getOrderCode()));
 
+        Cart cart = cartRepository.findByUserId(order.getUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart", "userId", order.getUser().getId()));
+
         //update order status
         order.setStatus(paymentStatus);
 
         //if payment is success
         if(paymentStatus.equals(OrderStatus.PAID)){
+            //sync payment info
+            syncPaymentInfo(webhook.getData());
+
             //clear cart
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.getCartItems().clear();
@@ -203,8 +205,10 @@ public class CheckoutServiceImpl implements CheckoutService {
             boolean hasConflict = false;
             do{
                 try {
-                    Map<Long, Inventory> inventories = inventoryRepository.findAllById(inventoryIds).stream()
-                            .collect(Collectors.toMap(Inventory::getId, inventory -> inventory));
+                    List<Inventory> inventoryList = inventoryRepository.findAllById(inventoryIds);
+                    inventoryList.forEach(i -> Hibernate.initialize(i));
+                    Map<Long, Inventory> inventories = inventoryList.stream()
+                            .collect(Collectors.toMap(Inventory::getId, Function.identity()));
                     for(OrderItem item : order.getOrderItems()){
                         Inventory inventory = inventories.get(item.getInventory().getId());
                         //cap nhat inventory
@@ -245,6 +249,11 @@ public class CheckoutServiceImpl implements CheckoutService {
                     "Unable to make payment due to some arising errors.");
         }
         return checkoutResponseData;
+    }
+
+    @Async("taskExecutor")
+    public void syncPaymentInfo(WebhookData webhookData){
+
     }
 
 }
