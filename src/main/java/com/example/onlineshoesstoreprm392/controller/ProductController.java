@@ -54,7 +54,7 @@ public class ProductController {
     }
 
 
-    //get all post rest api
+    //get all product rest api
     @GetMapping
     public ProductResponse getAllProducts(
             @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
@@ -65,7 +65,19 @@ public class ProductController {
         return productService.getAllProducts(pageNo, pageSize, sortBy, sortDir);
     }
 
-    //get post by id
+    //search product by keyword rest api
+    @GetMapping
+    public ProductResponse searchProducts(
+            @RequestParam(value = "keyword") String keyword,
+            @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false) String sortDir
+    ){
+        return productService.searchProducts(keyword, pageNo, pageSize, sortBy, sortDir);
+    }
+
+    //get product by id
     @GetMapping("/{id}")
     public ResponseEntity<ProductDto> getProductById(@PathVariable(name = "id") Long id){
         return ResponseEntity.ok(productService.getProductById(id));
@@ -96,7 +108,7 @@ public class ProductController {
         return ResponseEntity.ok("Product Deleted Successfully!");
     }
 
-    //get post by category api
+    //get product by category api
     //http://localhost:8080/api/posts/category/2
     @GetMapping("/category/{id}")
     public ResponseEntity<List<ProductDto>> getProductsByCategory(@PathVariable(name = "id") Long categoryId){

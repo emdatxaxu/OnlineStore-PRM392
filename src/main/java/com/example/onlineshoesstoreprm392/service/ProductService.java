@@ -13,4 +13,5 @@ public interface ProductService {
     ProductDto updateProduct(ProductDto dto, Long id);
     void deleteProductById(Long id);
     List<ProductDto> getProductsByCategory(Long categoryId);
+    ProductResponse searchProducts(String keyword, int pageNo, int pageSize, String sortBy, String sortDir);
 }

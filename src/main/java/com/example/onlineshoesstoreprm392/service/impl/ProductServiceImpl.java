@@ -157,5 +157,34 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public ProductResponse searchProducts(String keyword, int pageNo, int pageSize, String sortBy, String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ?
+                Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+
+        //create pageable instance
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        Page<Product> products = productRepository.findByKeyword(keyword, pageable);
+
+        //get content for page object
+        List<Product> listOfProducts = products.getContent();
+
+        List<ProductDto> content =  listOfProducts.stream().map(product -> productMapper.toProductDto(product))
+                .collect(Collectors.toList());
+
+        ProductResponse productResponse = ProductResponse.builder()
+                .content(content)
+                .pageNo(products.getNumber())
+                .pageSize(products.getSize())
+                .totalElements(products.getTotalElements())
+                .totalPages(products.getTotalPages())
+                .last(products.isLast())
+                .build();
+
+        return productResponse;
+    }
+
 
 }
