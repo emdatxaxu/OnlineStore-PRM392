@@ -66,7 +66,7 @@ public class ProductController {
     }
 
     //search product by keyword rest api
-    @GetMapping
+    @GetMapping("/search")
     public ProductResponse searchProducts(
             @RequestParam(value = "keyword") String keyword,
             @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,

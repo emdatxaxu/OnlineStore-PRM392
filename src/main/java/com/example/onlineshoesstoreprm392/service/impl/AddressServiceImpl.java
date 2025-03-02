@@ -11,11 +11,19 @@ import com.example.onlineshoesstoreprm392.repository.UserRepository;
 import com.example.onlineshoesstoreprm392.service.AddressService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
+@Service
 public class AddressServiceImpl implements AddressService {
     private UserRepository userRepository;
     private AddressRepository addressRepository;
     private AddressMapper addressMapper;
+
+    public AddressServiceImpl(UserRepository userRepository, AddressRepository addressRepository, AddressMapper addressMapper) {
+        this.userRepository = userRepository;
+        this.addressRepository = addressRepository;
+        this.addressMapper = addressMapper;
+    }
 
     @Override
     public AddressDto createAddress(AddressDto addressDto) {
