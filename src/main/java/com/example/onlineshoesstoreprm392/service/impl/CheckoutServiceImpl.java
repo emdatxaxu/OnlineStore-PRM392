@@ -22,6 +22,7 @@ import vn.payos.type.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -36,6 +37,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private CartMapper cartMapper;
     private OrderRepository orderRepository;
     private PayOS payOS;
+    private PaymentRepository paymentRepository;
 
     public CheckoutServiceImpl(UserRepository userRepository,
                                CartRepository cartRepository,
@@ -43,7 +45,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                                InventoryRepository inventoryRepository,
                                CartMapper cartMapper,
                                OrderRepository orderRepository,
-                               PayOS payOS) {
+                               PayOS payOS,
+                               PaymentRepository paymentRepository) {
         this.userRepository = userRepository;
         this.cartRepository = cartRepository;
         this.addressRepository = addressRepository;
@@ -51,6 +54,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         this.cartMapper = cartMapper;
         this.orderRepository = orderRepository;
         this.payOS = payOS;
+        this.paymentRepository = paymentRepository;
     }
 
     @Override
@@ -197,6 +201,7 @@ public class CheckoutServiceImpl implements CheckoutService {
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.getCartItems().clear();
             cartRepository.save(cart);
+            syncPaymentInfo(webhookData);
         }
         if(paymentStatus.equals(OrderStatus.CANCELLED)){
             //refund the units in stock for inventory
@@ -253,7 +258,21 @@ public class CheckoutServiceImpl implements CheckoutService {
 
     @Async("taskExecutor")
     public void syncPaymentInfo(WebhookData webhookData){
+        Order order = orderRepository.findById(webhookData.getOrderCode())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", webhookData.getOrderCode()));
 
+        Payment payment = new Payment();
+        payment.setOrder(order);
+        payment.setUser(order.getUser());
+        payment.setAmount(new BigDecimal(webhookData.getAmount()));
+        payment.setPaymentMethod("PayOS");
+        payment.setCurrency("VND");
+        payment.setStatus(1);
+        payment.setCreated_at(new Timestamp(System.currentTimeMillis()));
+        payment.setUpdated_at(new Timestamp(System.currentTimeMillis()));
+        payment.setAccountNumber(webhookData.getAccountNumber());
+
+        paymentRepository.save(payment);
     }
 
 }

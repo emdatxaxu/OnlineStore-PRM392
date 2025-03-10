@@ -1,17 +1,14 @@
 package com.example.onlineshoesstoreprm392.controller;
 
+import com.example.onlineshoesstoreprm392.payload.PageableResponse;
 import com.example.onlineshoesstoreprm392.payload.ProductDto;
-import com.example.onlineshoesstoreprm392.payload.ProductResponse;
 import com.example.onlineshoesstoreprm392.service.ProductService;
 import com.example.onlineshoesstoreprm392.utils.AppConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.mail.Multipart;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -56,7 +53,7 @@ public class ProductController {
 
     //get all product rest api
     @GetMapping
-    public ProductResponse getAllProducts(
+    public PageableResponse getAllProducts(
             @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
             @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
@@ -67,7 +64,7 @@ public class ProductController {
 
     //search product by keyword rest api
     @GetMapping("/search")
-    public ProductResponse searchProducts(
+    public PageableResponse searchProducts(
             @RequestParam(value = "keyword") String keyword,
             @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
             @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
@@ -111,8 +108,19 @@ public class ProductController {
     //get product by category api
     //http://localhost:8080/api/posts/category/2
     @GetMapping("/category/{id}")
-    public ResponseEntity<List<ProductDto>> getProductsByCategory(@PathVariable(name = "id") Long categoryId){
-        return ResponseEntity.ok(productService.getProductsByCategory(categoryId));
+    public PageableResponse getProductsByCategory(
+            @PathVariable(name = "id") Long categoryId,
+            @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false) String sortDir){
+        return productService.getProductsByCategory(categoryId, pageNo, pageSize, sortBy, sortDir);
+    }
+
+
+    @GetMapping("/top5newest")
+    public ResponseEntity<List<ProductDto>> getPopularProduct(){
+        return ResponseEntity.ok(productService.getPopularProduct());
     }
 
 }

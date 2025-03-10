@@ -32,7 +32,7 @@ public class Payment {
     int status;
 
     @Column(nullable = false)
-    String transactionId;
+    String accountNumber;
 
     @Column(nullable = false)
     Timestamp created_at;

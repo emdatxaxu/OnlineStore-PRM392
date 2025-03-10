@@ -6,8 +6,8 @@ import com.example.onlineshoesstoreprm392.exception.OnlineStoreAPIException;
 import com.example.onlineshoesstoreprm392.exception.ResourceNotFoundException;
 import com.example.onlineshoesstoreprm392.mapper.ProductMapper;
 import com.example.onlineshoesstoreprm392.payload.ImageDto;
+import com.example.onlineshoesstoreprm392.payload.PageableResponse;
 import com.example.onlineshoesstoreprm392.payload.ProductDto;
-import com.example.onlineshoesstoreprm392.payload.ProductResponse;
 import com.example.onlineshoesstoreprm392.repository.CategoryRepository;
 import com.example.onlineshoesstoreprm392.repository.ProductRepository;
 import com.example.onlineshoesstoreprm392.service.ProductService;
@@ -82,7 +82,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponse getAllProducts(int pageNo, int pageSize, String sortBy, String sortDir) {
+    public PageableResponse getAllProducts(int pageNo, int pageSize, String sortBy, String sortDir) {
 
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ?
                 Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
@@ -98,14 +98,9 @@ public class ProductServiceImpl implements ProductService {
         List<ProductDto> content =  listOfProducts.stream().map(product -> productMapper.toProductDto(product))
                 .collect(Collectors.toList());
 
-        ProductResponse productResponse = ProductResponse.builder()
-                .content(content)
-                .pageNo(products.getNumber())
-                .pageSize(products.getSize())
-                .totalElements(products.getTotalElements())
-                .totalPages(products.getTotalPages())
-                .last(products.isLast())
-                .build();
+        PageableResponse productResponse = new PageableResponse<ProductDto>(content, products.getNumber(),
+                products.getSize(), products.getTotalElements(), products.getTotalPages(), products.isLast());
+
         return productResponse;
     }
 
@@ -147,18 +142,32 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductDto> getProductsByCategory(Long categoryId) {
+    public PageableResponse getProductsByCategory(Long categoryId, int pageNo, int pageSize, String sortBy, String sortDir) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
 
-        List<Product> products = productRepository.findByCategoryIdAndDeleted(categoryId, false);
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ?
+                Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
 
-        return products.stream().map(product -> productMapper.toProductDto(product))
+        //create pageable instance
+        Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+
+        Page<Product> products = productRepository.findByCategoryIdAndDeleted(categoryId, false, pageable);
+
+        //get content for page object
+        List<Product> listOfProducts = products.getContent();
+
+        List<ProductDto> content =  listOfProducts.stream().map(product -> productMapper.toProductDto(product))
                 .collect(Collectors.toList());
+
+        PageableResponse productResponse = new PageableResponse<ProductDto>(content, products.getNumber(),
+                products.getSize(), products.getTotalElements(), products.getTotalPages(), products.isLast());
+
+        return productResponse;
     }
 
     @Override
-    public ProductResponse searchProducts(String keyword, int pageNo, int pageSize, String sortBy, String sortDir) {
+    public PageableResponse searchProducts(String keyword, int pageNo, int pageSize, String sortBy, String sortDir) {
 
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ?
                 Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
@@ -174,16 +183,16 @@ public class ProductServiceImpl implements ProductService {
         List<ProductDto> content =  listOfProducts.stream().map(product -> productMapper.toProductDto(product))
                 .collect(Collectors.toList());
 
-        ProductResponse productResponse = ProductResponse.builder()
-                .content(content)
-                .pageNo(products.getNumber())
-                .pageSize(products.getSize())
-                .totalElements(products.getTotalElements())
-                .totalPages(products.getTotalPages())
-                .last(products.isLast())
-                .build();
+        PageableResponse productResponse = new PageableResponse<ProductDto>(content, products.getNumber(),
+                products.getSize(), products.getTotalElements(), products.getTotalPages(), products.isLast());
 
         return productResponse;
+    }
+
+    @Override
+    public List<ProductDto> getPopularProduct() {
+        List<Product> products = productRepository.findTop5Newest(PageRequest.of(0,5));
+        return products.stream().map(product -> productMapper.toProductDto(product)).collect(Collectors.toList());
     }
 
 
