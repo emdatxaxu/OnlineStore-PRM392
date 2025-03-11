@@ -8,6 +8,7 @@ import com.example.onlineshoesstoreprm392.payload.RecipientInfoDto;
 import com.example.onlineshoesstoreprm392.repository.*;
 import com.example.onlineshoesstoreprm392.service.CheckoutService;
 import com.example.onlineshoesstoreprm392.utils.OrderStatus;
+import com.example.onlineshoesstoreprm392.utils.PaymentWebsocketHandler;
 import org.hibernate.Hibernate;
 import org.springframework.http.HttpStatus;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.payos.PayOS;
 import vn.payos.type.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -135,6 +137,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
         order.setOrderItems(orderItems);
         order = orderRepository.save(order);
+        System.out.println(order.getId());
         return getCheckoutData(order);
     }
 
@@ -168,7 +171,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     //nhan du lieu tra ve tu cong thanh toan de hoan tat thanh toan
     @Override
     @Transactional(rollbackFor = {Exception.class, RuntimeException.class})
-    public void completePayment(Webhook webhook) {
+    public void completePayment(Webhook webhook) throws IOException {
         //webhook domainUrl+"/api/checkout/payment-info"
         //lay data ma PayOS tra ve webhook
         WebhookData webhookData;
@@ -181,7 +184,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
 
         String paymentStatus = paymentLinkData.getStatus();
-
+        System.out.println("STATUSSSSSSSSSSSSSSSSS: "+paymentStatus);
         //get user's order
         Order order = orderRepository.findById(webhookData.getOrderCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id",webhookData.getOrderCode()));
@@ -194,14 +197,16 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         //if payment is success
         if(paymentStatus.equals(OrderStatus.PAID)){
-            //sync payment info
-            syncPaymentInfo(webhook.getData());
-
             //clear cart
             cart.setTotalPrice(BigDecimal.ZERO);
             cart.getCartItems().clear();
             cartRepository.save(cart);
+
+            //sync payment info
             syncPaymentInfo(webhookData);
+
+            //broadcast to android client
+            PaymentWebsocketHandler.notifyPaymentSuccess(order.getUser().getUsername());
         }
         if(paymentStatus.equals(OrderStatus.CANCELLED)){
             //refund the units in stock for inventory
@@ -242,7 +247,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
         PaymentData paymentData = PaymentData.builder()
                 .orderCode(order.getId())
-                .amount(order.getTotalPrice().intValue()).description("Thanh toan don hang")
+                .amount(order.getTotalPrice().intValue()).description("Thanh toan don hang "+order.getId())
                 .returnUrl("")
                 .cancelUrl("")
                 .items(itemDataList).build();
@@ -250,14 +255,18 @@ public class CheckoutServiceImpl implements CheckoutService {
         try {
              checkoutResponseData = payOS.createPaymentLink(paymentData);
         } catch (Exception e) {
+//            throw new OnlineStoreAPIException(HttpStatus.SERVICE_UNAVAILABLE,
+//                    "Unable to make payment due to some arising errors.");
             throw new OnlineStoreAPIException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "Unable to make payment due to some arising errors.");
+                    e.getMessage());
         }
         return checkoutResponseData;
     }
 
     @Async("taskExecutor")
     public void syncPaymentInfo(WebhookData webhookData){
+
+
         Order order = orderRepository.findById(webhookData.getOrderCode())
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", webhookData.getOrderCode()));
 

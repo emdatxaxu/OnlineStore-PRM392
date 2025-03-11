@@ -1,5 +1,6 @@
 package com.example.onlineshoesstoreprm392.controller;
 
+import com.example.onlineshoesstoreprm392.payload.OrderDto;
 import com.example.onlineshoesstoreprm392.payload.PageableResponse;
 import com.example.onlineshoesstoreprm392.payload.ProfileDto;
 import com.example.onlineshoesstoreprm392.service.UserService;
@@ -24,6 +25,17 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<ProfileDto> getProfile(){
         return ResponseEntity.ok(userService.getProfile());
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping("/orders")
+    public ResponseEntity<PageableResponse<OrderDto>> getOrdersOfUser(
+            @RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+            @RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
+            @RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false) String sortDir
+    ){
+        return ResponseEntity.ok(userService.getOrdersByUser(pageNo, pageSize, sortBy, sortDir));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

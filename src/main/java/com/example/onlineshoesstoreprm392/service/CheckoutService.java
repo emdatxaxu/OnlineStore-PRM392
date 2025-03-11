@@ -4,8 +4,10 @@ import com.example.onlineshoesstoreprm392.payload.RecipientInfoDto;
 import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.Webhook;
 
+import java.io.IOException;
+
 public interface CheckoutService {
     CheckoutResponseData confirmCheckout(RecipientInfoDto recipientInfo);
     RecipientInfoDto checkout();
-    void completePayment(Webhook webhook);
+    void completePayment(Webhook webhook) throws IOException;
 }

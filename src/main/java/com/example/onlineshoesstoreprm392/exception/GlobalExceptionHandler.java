@@ -31,7 +31,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(OnlineStoreAPIException.class)
-    public ResponseEntity<ErrorDetails> handleBlogAPIException(OnlineStoreAPIException exception,
+    public ResponseEntity<ErrorDetails> handleOnlineStoreAPIException(OnlineStoreAPIException exception,
                                                                WebRequest webRequest){
         ErrorDetails errorDetails = new ErrorDetails(new Date(), exception.getMessage(),
                 webRequest.getDescription(false));

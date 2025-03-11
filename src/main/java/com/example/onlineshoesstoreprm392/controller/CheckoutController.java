@@ -2,6 +2,7 @@ package com.example.onlineshoesstoreprm392.controller;
 
 import com.example.onlineshoesstoreprm392.payload.RecipientInfoDto;
 import com.example.onlineshoesstoreprm392.service.CheckoutService;
+import com.example.onlineshoesstoreprm392.utils.PaymentWebsocketHandler;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import vn.payos.type.CheckoutResponseData;
 import vn.payos.type.Webhook;
 import vn.payos.util.SignatureUtils;
 
+import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
@@ -48,18 +50,14 @@ public class CheckoutController {
 
     //webhook
     @PostMapping("/payment-info")
-    public ResponseEntity completePayment(@RequestBody Webhook webhook){
+    public ResponseEntity completePayment(@RequestBody Webhook webhook) throws IOException {
         checkoutService.completePayment(webhook);
-        String signature = null;
-        try {
-            signature = SignatureUtils.createSignatureFromObj(webhook.getData(),checksumKey);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        }
-        webhook.setSuccess(true);
-        webhook.setSignature(signature);
+
         return ResponseEntity.ok(webhook);
+    }
+
+    @GetMapping("/test")
+    public void testWebscoket() throws IOException {
+        PaymentWebsocketHandler.notifyPaymentSuccess("datdt");
     }
 }

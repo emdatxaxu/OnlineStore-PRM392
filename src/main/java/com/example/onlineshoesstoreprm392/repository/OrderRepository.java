@@ -4,6 +4,7 @@ import com.example.onlineshoesstoreprm392.entity.Order;
 import com.example.onlineshoesstoreprm392.payload.MonthlyRevenueDto;
 import com.example.onlineshoesstoreprm392.payload.ProductSalesDto;
 import com.example.onlineshoesstoreprm392.utils.OrderStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -30,6 +31,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT ot.name, SUM(ot.quantity) AS quantity FROM OrderItem ot GROUP BY ot.name " +
             "ORDER BY SUM(ot.quantity) DESC ")
     List<Object[]> getProductSales(Pageable pageable);
+
+
+    Page<Order> findByUserId(Long userId, Pageable pageable);
 
 
 
